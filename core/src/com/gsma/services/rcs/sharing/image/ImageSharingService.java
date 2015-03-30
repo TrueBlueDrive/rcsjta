@@ -22,6 +22,7 @@
 
 package com.gsma.services.rcs.sharing.image;
 
+import com.gsma.services.rcs.RcsPermissionDeniedException;
 import com.gsma.services.rcs.RcsService;
 import com.gsma.services.rcs.RcsServiceControl;
 import com.gsma.services.rcs.RcsServiceException;
@@ -77,8 +78,21 @@ public class ImageSharingService extends RcsService {
 
     /**
      * Connects to the API
+     * 
+     * @throws RcsPermissionDeniedException
      */
-    public void connect() {
+    public void connect() throws RcsPermissionDeniedException {
+        if (!sApiCompatible) {
+            try {
+                sApiCompatible = mRcsServiceControl.isCompatible(RcsService.Build.API_CODENAME,
+                        RcsService.Build.API_VERSION, RcsService.Build.API_INCREMENTAL);
+                if (!sApiCompatible) {
+                    throw new RcsPermissionDeniedException("API is not compatible");
+                }
+            } catch (RcsServiceException e) {
+                throw new RcsPermissionDeniedException("Cannot check API compatibility");
+            }
+        }
         Intent serviceIntent = new Intent(IImageSharingService.class.getName());
         serviceIntent.setPackage(RcsServiceControl.RCS_STACK_PACKAGENAME);
         mCtx.bindService(serviceIntent, apiConnection, 0);
@@ -130,6 +144,8 @@ public class ImageSharingService extends RcsService {
                 // Do nothing
             }
             mListener.onServiceDisconnected(reasonCode);
+
+            sApiCompatible = false;
         }
     };
 

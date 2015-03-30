@@ -183,8 +183,12 @@ public class RcsServiceControl {
      * @return the result extra data bundle or null if no response is received due to timeout
      */
     private Bundle queryRcsStackByIntent(String action) {
+        return queryRcsStackByIntent(new Intent(action));
+    }
+
+    private Bundle queryRcsStackByIntent(Intent intent) {
         final SyncBroadcastReceiver broadcastReceiver = new SyncBroadcastReceiver();
-        final Intent broadcastIntent = new Intent(action).setPackage(RCS_STACK_PACKAGENAME);
+        final Intent broadcastIntent = intent.setPackage(RCS_STACK_PACKAGENAME);
 
         // Update flags of the broadcast intent to increase performance
         trySetIntentForActivePackageAndReceiverInForeground(broadcastIntent);
@@ -304,4 +308,26 @@ public class RcsServiceControl {
         mContext.sendBroadcast(broadcastIntent);
     }
 
+    /**
+     * Returns true if the RCS API and core RCS stack are compatible.
+     * 
+     * @param codename the code name of the RCS API
+     * @param version the version of the RCS API
+     * @param increment the increment of the RCS API
+     * @return true if the RCS stack and RCS API are compatible.
+     * @throws RcsServiceException
+     */
+    public boolean isCompatible(String codename, int version, int increment)
+            throws RcsServiceException {
+        Intent intent = new Intent(Intents.Service.ACTION_GET_COMPATIBLITY);
+        intent.putExtra(Intents.Service.EXTRA_GET_COMPATIBLITY_CODENAME, codename);
+        intent.putExtra(Intents.Service.EXTRA_GET_COMPATIBLITY_VERSION, version);
+        intent.putExtra(Intents.Service.EXTRA_GET_COMPATIBLITY_INCREMENT, increment);
+        Bundle resultExtraData = queryRcsStackByIntent(intent);
+        if (resultExtraData == null) {
+            // No response
+            throw new RcsServiceException("Failed to get RCS API compatibility");
+        }
+        return resultExtraData.getBoolean(Intents.Service.EXTRA_GET_COMPATIBLITY_RESPONSE, false);
+    }
 }
